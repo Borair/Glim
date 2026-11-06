@@ -61,7 +61,8 @@ struct ContentView: View {
                         tree: tree, sidebar: sidebar, detailFocus: detailFocus,
                         openFile: { url in Task { try? await openDocument(at: url) } },
                         showsNewFile: false)
-                .navigationSplitViewColumnWidth(min: 180, ideal: 240, max: 420)
+                // A calm, compact navigation rail keeps the document as the visual focus.
+                .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 360)
         } detail: {
             detail
                 .toolbar { toolbarContent }
@@ -88,6 +89,9 @@ struct ContentView: View {
         // edit mode the action is nil, which disables the File-menu items (D1).
         .focusedSceneValue(\.printAction, mode == .view ? printDocument : nil)
         .focusedSceneValue(\.exportPDFAction, mode == .view ? exportPDF : nil)
+        // Use the system's editor treatment: restrained spacing, native sidebar controls,
+        // and a toolbar that recedes behind the document instead of competing with it.
+        .toolbarRole(.editor)
         .background(WindowAccessor(rootKey: browsingRoot?.standardizedFileURL.path ?? "none"))
         // Toggling to the rendered view focuses it so arrow keys scroll immediately.
         // (The raw editor self-focuses on entry.) Only fires on an actual ⌘E toggle,
@@ -317,26 +321,35 @@ struct ContentView: View {
     }
 
     @ToolbarContentBuilder private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            DocumentToolbarTitle(fileURL: fileURL, mode: mode)
+        }
         ToolbarItem(placement: .primaryAction) {
             Button(action: createNewFile) {
                 Image(systemName: "square.and.pencil")
             }
             .help("New Markdown File  (⌘N)")
-        }
-        ToolbarItem(placement: .primaryAction) {
-            Toggle(isOn: Binding(get: { fullWidth.isFullWidth },
-                                 set: { _ in fullWidth.toggle() })) {
-                Image(systemName: "arrow.left.and.right")
-            }
-            .help("Toggle Full Width  (⇧⌘F)")
+            .accessibilityLabel("New Markdown File")
         }
         ToolbarItem(placement: .primaryAction) {
             Picker("Mode", selection: $mode) {
-                Image(systemName: "eye").tag(EditorMode.view)
-                Image(systemName: "pencil").tag(EditorMode.edit)
+                Label("Preview", systemImage: "eye").tag(EditorMode.view)
+                Label("Edit", systemImage: "pencil").tag(EditorMode.edit)
             }
             .pickerStyle(.segmented)
             .help("Toggle View / Edit  (⌘E)")
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Menu {
+                Toggle(isOn: Binding(get: { fullWidth.isFullWidth },
+                                     set: { _ in fullWidth.toggle() })) {
+                    Label("Full Width", systemImage: "arrow.left.and.right")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+            .help("Document Options")
+            .accessibilityLabel("Document Options")
         }
         // Share the document file itself (D1). ShareLink renders as a native toolbar share
         // button; hidden for an untitled (no-URL) document.
@@ -382,6 +395,37 @@ struct ContentView: View {
                 try? data.write(to: url)
             }
         }
+    }
+}
+
+/// A quiet, always-native title treatment for the editor toolbar. The filename gives
+/// each tab a stable point of orientation without adding a second document header.
+private struct DocumentToolbarTitle: View {
+    let fileURL: URL?
+    let mode: EditorMode
+
+    private var filename: String {
+        fileURL?.deletingPathExtension().lastPathComponent ?? "Untitled"
+    }
+
+    private var modeLabel: String { mode == .edit ? "Editing" : "Preview" }
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "doc.text")
+                .foregroundStyle(.secondary)
+            Text(filename)
+                .font(.headline)
+                .lineLimit(1)
+            Text(modeLabel)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(.quaternary, in: Capsule())
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(filename), \(modeLabel)")
     }
 }
 
