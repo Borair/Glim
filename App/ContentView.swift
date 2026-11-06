@@ -39,6 +39,9 @@ struct ContentView: View {
     @ObservedObject private var outlineVis = OutlineVisibility.shared
     @StateObject private var viewerHandle = ViewerHandle()
     @State private var hoveredLink = ""
+    @State private var isFocusMode = false
+    @State private var sidebarBeforeFocus: NavigationSplitViewVisibility = .all
+    @State private var outlineBeforeFocus = false
     // Outline-panel jump (A2): a bumped token carries the target source line to the active mode.
     @State private var outlineJumpToken = 0
     @State private var outlineJumpLine: Int?
@@ -83,6 +86,7 @@ struct ContentView: View {
         .focusedSceneValue(\.findController, find)
         .focusedSceneValue(\.newFileAction, createNewFile)
         .focusedSceneValue(\.focusSidebarAction, focusSidebar)
+        .focusedSceneValue(\.focusModeAction, toggleFocusMode)
         .focusedSceneValue(\.quickOpenAction, { quickOpen.show(root: browsingRoot) })
         .focusedSceneValue(\.openFolderAction, openOtherFolder)
         // Print / Export are wired only in view mode (they drive the rendered web view); in
@@ -264,6 +268,24 @@ struct ContentView: View {
         sidebar.focus()
     }
 
+    /// Temporarily clears surrounding chrome for uninterrupted drafting or reading, then
+    /// restores the exact sidebar and outline state the person had before entering.
+    private func toggleFocusMode() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            if isFocusMode {
+                sidebarVis.columnVisibility = sidebarBeforeFocus
+                outlineVis.isVisible = outlineBeforeFocus
+            } else {
+                sidebarBeforeFocus = sidebarVis.columnVisibility
+                outlineBeforeFocus = outlineVis.isVisible
+                sidebarVis.columnVisibility = .detailOnly
+                outlineVis.isVisible = false
+            }
+            isFocusMode.toggle()
+        }
+        detailFocus.focus()
+    }
+
     @ViewBuilder private var detail: some View {
         VStack(spacing: 0) {
             if fileSync.conflict != nil {
@@ -341,6 +363,8 @@ struct ContentView: View {
         }
         ToolbarItem(placement: .primaryAction) {
             Menu {
+                Button(isFocusMode ? "Exit Focus Mode" : "Enter Focus Mode",
+                       action: toggleFocusMode)
                 Toggle(isOn: Binding(get: { fullWidth.isFullWidth },
                                      set: { _ in fullWidth.toggle() })) {
                     Label("Full Width", systemImage: "arrow.left.and.right")

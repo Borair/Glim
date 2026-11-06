@@ -32,6 +32,7 @@ struct GlimApp: App {
             }
             CommandGroup(after: .toolbar) {
                 ModeCommands()
+                FocusModeCommand()
                 OutlineCommand()
                 Divider()
                 FullWidthCommand()
@@ -171,6 +172,18 @@ private struct ModeCommands: View {
     }
 }
 
+/// Distraction-free workspace, scoped to the focused document window. It hides the
+/// sidebar and outline temporarily and restores the previous layout on exit.
+private struct FocusModeCommand: View {
+    @FocusedValue(\.focusModeAction) private var toggleFocusMode: (() -> Void)?
+
+    var body: some View {
+        Button("Toggle Focus Mode") { toggleFocusMode?() }
+            .keyboardShortcut("f", modifiers: [.command, .control])
+            .disabled(toggleFocusMode == nil)
+    }
+}
+
 /// File-menu Print… (⌘P) and Export as PDF… (⌥⌘E), driving the focused window's rendered
 /// web view (D1). Both are disabled in edit mode (their action is nil then), because they
 /// print/export the RENDERED document and the live web view exists only in view mode — the
@@ -235,6 +248,7 @@ private struct EditorModeKey: FocusedValueKey { typealias Value = Binding<Editor
 private struct SidebarVisibleKey: FocusedValueKey { typealias Value = Binding<Bool> }
 private struct NewFileActionKey: FocusedValueKey { typealias Value = () -> Void }
 private struct FocusSidebarActionKey: FocusedValueKey { typealias Value = () -> Void }
+private struct FocusModeActionKey: FocusedValueKey { typealias Value = () -> Void }
 private struct PrintActionKey: FocusedValueKey { typealias Value = () -> Void }
 private struct ExportPDFActionKey: FocusedValueKey { typealias Value = () -> Void }
 
@@ -254,6 +268,10 @@ extension FocusedValues {
     var focusSidebarAction: (() -> Void)? {
         get { self[FocusSidebarActionKey.self] }
         set { self[FocusSidebarActionKey.self] = newValue }
+    }
+    var focusModeAction: (() -> Void)? {
+        get { self[FocusModeActionKey.self] }
+        set { self[FocusModeActionKey.self] = newValue }
     }
     var printAction: (() -> Void)? {
         get { self[PrintActionKey.self] }
