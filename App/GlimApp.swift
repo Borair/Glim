@@ -31,6 +31,8 @@ struct GlimApp: App {
                 FormatCommands()
             }
             CommandGroup(after: .toolbar) {
+                CommandPaletteCommand()
+                Divider()
                 ModeCommands()
                 FocusModeCommand()
                 OutlineCommand()
@@ -143,7 +145,17 @@ private struct FormatCommands: View {
         Button("Add Link…") {
             NSApp.sendAction(#selector(MarkdownTextView.insertMarkdownLink(_:)), to: nil, from: nil)
         }
-        .keyboardShortcut("k", modifiers: .command)
+        .keyboardShortcut("k", modifiers: [.command, .shift])
+    }
+}
+
+private struct CommandPaletteCommand: View {
+    @FocusedValue(\.commandPaletteAction) private var showCommandPalette: (() -> Void)?
+
+    var body: some View {
+        Button("Command Palette…") { showCommandPalette?() }
+            .keyboardShortcut("k", modifiers: .command)
+            .disabled(showCommandPalette == nil)
     }
 }
 
@@ -248,9 +260,11 @@ private struct EditorModeKey: FocusedValueKey { typealias Value = Binding<Editor
 private struct SidebarVisibleKey: FocusedValueKey { typealias Value = Binding<Bool> }
 private struct NewFileActionKey: FocusedValueKey { typealias Value = () -> Void }
 private struct FocusSidebarActionKey: FocusedValueKey { typealias Value = () -> Void }
+private struct CommandPaletteActionKey: FocusedValueKey { typealias Value = () -> Void }
 private struct FocusModeActionKey: FocusedValueKey { typealias Value = () -> Void }
 private struct PrintActionKey: FocusedValueKey { typealias Value = () -> Void }
 private struct ExportPDFActionKey: FocusedValueKey { typealias Value = () -> Void }
+private struct ExportHTMLActionKey: FocusedValueKey { typealias Value = () -> Void }
 
 extension FocusedValues {
     var editorMode: Binding<EditorMode>? {
@@ -269,6 +283,10 @@ extension FocusedValues {
         get { self[FocusSidebarActionKey.self] }
         set { self[FocusSidebarActionKey.self] = newValue }
     }
+    var commandPaletteAction: (() -> Void)? {
+        get { self[CommandPaletteActionKey.self] }
+        set { self[CommandPaletteActionKey.self] = newValue }
+    }
     var focusModeAction: (() -> Void)? {
         get { self[FocusModeActionKey.self] }
         set { self[FocusModeActionKey.self] = newValue }
@@ -280,5 +298,9 @@ extension FocusedValues {
     var exportPDFAction: (() -> Void)? {
         get { self[ExportPDFActionKey.self] }
         set { self[ExportPDFActionKey.self] = newValue }
+    }
+    var exportHTMLAction: (() -> Void)? {
+        get { self[ExportHTMLActionKey.self] }
+        set { self[ExportHTMLActionKey.self] = newValue }
     }
 }

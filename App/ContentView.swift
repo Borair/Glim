@@ -31,6 +31,7 @@ struct ContentView: View {
     @StateObject private var detailFocus = DetailFocusController()
     @StateObject private var selection = SelectionController()
     @StateObject private var quickOpen = QuickOpenController()
+    @State private var commandPaletteVisible = false
     @StateObject private var fileSync = FileSync()
     @StateObject private var editCursor = EditCursorStore()
     @StateObject private var editBuffer = EditorBuffer()
@@ -81,6 +82,9 @@ struct ContentView: View {
                                     set: { if !$0 { quickOpen.hide() } })) {
             QuickOpenPalette(controller: quickOpen, onOpen: openFromQuickOpen)
         }
+        .sheet(isPresented: $commandPaletteVisible) {
+            CommandPalette(actions: commandActions, onDismiss: { commandPaletteVisible = false })
+        }
         .focusedSceneValue(\.editorMode, $mode)
         .focusedSceneValue(\.sidebarVisible, sidebarVisible)
         .focusedSceneValue(\.findController, find)
@@ -88,11 +92,13 @@ struct ContentView: View {
         .focusedSceneValue(\.focusSidebarAction, focusSidebar)
         .focusedSceneValue(\.focusModeAction, toggleFocusMode)
         .focusedSceneValue(\.quickOpenAction, { quickOpen.show(root: browsingRoot) })
+        .focusedSceneValue(\.commandPaletteAction, { commandPaletteVisible = true })
         .focusedSceneValue(\.openFolderAction, openOtherFolder)
         // Print / Export are wired only in view mode (they drive the rendered web view); in
         // edit mode the action is nil, which disables the File-menu items (D1).
         .focusedSceneValue(\.printAction, mode == .view ? printDocument : nil)
         .focusedSceneValue(\.exportPDFAction, mode == .view ? exportPDF : nil)
+        .focusedSceneValue(\.exportHTMLAction, mode == .view ? exportHTML : nil)
         // Use the system's editor treatment: restrained spacing, native sidebar controls,
         // and a toolbar that recedes behind the document instead of competing with it.
         .toolbarRole(.editor)
@@ -108,12 +114,14 @@ struct ContentView: View {
         // A sidebar-initiated open can land in this tab (new or already-open); claim
         // the parked focus intent once we're showing that file.
         .onAppear {
+            restoreReadingPosition()
             claimPendingFocus()
             if let f = fileURL?.standardizedFileURL { OpenRootRouter.shared.roots[f] = nil }
             fileSync.currentText = { document.text }
             fileSync.applyReload = { document.text = $0 }
             fileSync.start(url: fileURL)
         }
+        .onDisappear { saveReadingPosition() }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
             claimPendingFocus()
         }
@@ -131,6 +139,24 @@ struct ContentView: View {
             case .detail: detailFocus.focus()
             }
         }
+    }
+
+    /// Each document resumes at its last shared source line, whether it was last viewed as
+    /// rendered Markdown or edited as source. The key is deliberately path-based: a rename
+    /// starts fresh instead of restoring a position from an unrelated replacement file.
+    private var readingPositionKey: String? {
+        fileURL.map { "glim.readingPosition.\($0.standardizedFileURL.path)" }
+    }
+
+    private func restoreReadingPosition() {
+        guard let key = readingPositionKey,
+              UserDefaults.standard.object(forKey: key) != nil else { return }
+        sync.restore(line: UserDefaults.standard.integer(forKey: key))
+    }
+
+    private func saveReadingPosition() {
+        guard let key = readingPositionKey, sync.primed else { return }
+        UserDefaults.standard.set(sync.line, forKey: key)
     }
 
     /// Creates a new markdown file in the open file's folder and opens it as a tab.
@@ -163,6 +189,20 @@ struct ContentView: View {
         guard FileEntry.isMarkdown(url) else { NSWorkspace.shared.open(url); return }
         // Root the destination at the palette's folder (the picked one for ⌘⇧O, else this tab's).
         open(url, rootedAt: quickOpen.root ?? browsingRoot)
+    }
+
+    private var commandActions: [CommandPaletteAction] {
+        [
+            .init(id: "new", title: "New Markdown File", detail: "Create a file beside the current document", symbol: "square.and.pencil", perform: createNewFile),
+            .init(id: "open", title: "Open File", detail: "Search Markdown files in this folder", symbol: "magnifyingglass", perform: { quickOpen.show(root: browsingRoot) }),
+            .init(id: "mode", title: mode == .edit ? "Switch to Preview" : "Switch to Edit", detail: "Toggle rendered Markdown and source", symbol: mode == .edit ? "eye" : "pencil", perform: { mode = mode == .edit ? .view : .edit }),
+            .init(id: "focus", title: isFocusMode ? "Exit Focus Mode" : "Enter Focus Mode", detail: "Temporarily hide surrounding navigation", symbol: "arrow.up.left.and.arrow.down.right", perform: toggleFocusMode),
+            .init(id: "sidebar", title: "Toggle Sidebar", detail: "Show or hide the file tree", symbol: "sidebar.left", perform: { sidebarVisible.wrappedValue.toggle() }),
+            .init(id: "outline", title: outlineVis.isVisible ? "Hide Outline" : "Show Outline", detail: "Navigate headings in the current document", symbol: "list.bullet.indent", perform: { outlineVis.toggle() }),
+            .init(id: "width", title: "Toggle Full Width", detail: "Expand or constrain the writing measure", symbol: "arrow.left.and.right", perform: { fullWidth.toggle() }),
+            .init(id: "pdf", title: "Export PDF", detail: "Save the rendered document as a PDF", symbol: "doc.richtext", perform: exportPDF),
+            .init(id: "html", title: "Export HTML", detail: "Save a standalone rendered HTML document", symbol: "chevron.left.forwardslash.chevron.right", perform: exportHTML)
+        ]
     }
 
     /// Opens a markdown file in Glim from an in-document link, rooted at this tab's folder.
@@ -417,6 +457,23 @@ struct ContentView: View {
             panel.begin { resp in
                 guard resp == .OK, let url = panel.url else { return }
                 try? data.write(to: url)
+            }
+        }
+    }
+
+    /// Exports the current rendered page, including its already-inlined local images, as a
+    /// portable HTML file. View-mode only, matching Print and PDF export.
+    private func exportHTML() {
+        guard let webView = viewerHandle.webView else { return }
+        webView.evaluateJavaScript("document.documentElement.outerHTML") { value, _ in
+            guard let html = value as? String else { return }
+            let panel = NSSavePanel()
+            panel.allowedContentTypes = [.html]
+            panel.nameFieldStringValue =
+                (fileURL?.deletingPathExtension().lastPathComponent ?? "Untitled") + ".html"
+            panel.begin { response in
+                guard response == .OK, let url = panel.url else { return }
+                try? html.data(using: .utf8)?.write(to: url)
             }
         }
     }

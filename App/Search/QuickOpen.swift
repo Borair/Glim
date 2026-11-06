@@ -356,7 +356,7 @@ private struct ContentMatchesHeader: View {
 /// AppKit text field for the palette: grabs first responder as soon as it's in the sheet
 /// window, mirrors its text into the binding, and routes Return (open top match) / Esc (close).
 /// Selection/opening of any other row is done by mouse click on the list.
-private struct QuickOpenField: NSViewRepresentable {
+struct QuickOpenField: NSViewRepresentable {
     @Binding var text: String
     var onMoveUp: () -> Void
     var onMoveDown: () -> Void

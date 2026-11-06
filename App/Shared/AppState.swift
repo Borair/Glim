@@ -17,6 +17,13 @@ final class ScrollSync: ObservableObject {
         self.primed = true
     }
 
+    /// Seeds a newly opened document with its persisted cursor location before either
+    /// renderer appears, so both Preview and Edit restore to the same source line.
+    func restore(line: Int) {
+        self.line = max(0, line)
+        self.primed = true
+    }
+
     /// Line the `incoming` view should restore to (nil until a position exists). The
     /// incoming view always restores the shared line — including when it set it last,
     /// which is a no-op — so a plain ⌘E toggle never snaps back to the top.
