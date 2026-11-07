@@ -1,147 +1,61 @@
-<div align="center">
-
-<img src="assets/icon.png" width="128" alt="Glim icon">
-
 # Glim
 
-**A minimal, native macOS Markdown editor.**
+> 本仓库是 [yeduk3/Glim](https://github.com/yeduk3/Glim) 的个人派生版本（derivative work），并非从零原创项目。  
+> This repository is a personal derivative of [yeduk3/Glim](https://github.com/yeduk3/Glim), not a project created from scratch.
 
-Two modes — clean **View** and raw **Edit**. Folder sidebar, offline **LaTeX**, and **Quick Look** previews from Finder.
+Glim 是一个原生 macOS Markdown 浏览与编辑应用，基于 SwiftUI 构建，支持渲染与编辑视图、文件夹侧边栏、Quick Look 预览与离线 LaTeX 数学公式。
 
-[![release](https://img.shields.io/github/v/release/yeduk3/Glim)](https://github.com/yeduk3/Glim/releases/latest)
-![platform](https://img.shields.io/badge/platform-macOS%2014%2B-blue)
-![swift](https://img.shields.io/badge/Swift-5-orange)
-![license](https://img.shields.io/badge/license-MIT-green)
+## Origin & attribution / 来源与署名
 
-<br>
+- **Original project / 原项目：** [yeduk3/Glim](https://github.com/yeduk3/Glim)
+- **Original author / 原作者：** yeduk3
+- **License / 许可证：** [MIT](LICENSE) © 2026 yeduk3
 
-<img src="assets/screenshot-view.png" width="860" alt="Glim — View mode: sidebar, tabs, rendered Markdown with KaTeX math and syntax-highlighted code">
+本仓库保留原项目的许可证与版权声明。若你使用、分发或继续修改此代码，请同时保留这些声明。
 
-</div>
+## Changes in this repository / 此仓库的改动
 
----
+在上游 Glim v1.3.2 的基础上，本仓库目前包含以下本地改动：
 
-## View / Edit
+- 更专注的 Markdown 写作界面（focus mode）
+- 命令面板（command palette）
+- HTML 导出功能
 
-Toggle with `⌘E` — *View* renders KaTeX math, tables, and highlighted code; *Edit* is the raw source with linting. The sidebar shows the file's folder, and same-folder files open as tabs.
+这些功能是对原项目的增量修改；核心应用架构和大部分功能仍来自上游项目。
 
-| View | Edit |
-| :---: | :---: |
-| <img src="assets/screenshot-view.png" alt="View mode"> | <img src="assets/screenshot-edit.png" alt="Edit mode"> |
+## Upstream capabilities / 上游功能
 
----
+- 原生 macOS Markdown View / Edit 模式
+- 文件夹浏览、同目录标签页与 Finder Quick Look 预览
+- GitHub 风格 Markdown 渲染、代码高亮与离线 KaTeX
+- SwiftUI + WebKit 实现，目标系统为 macOS 14+
 
-## Features
+有关完整功能说明、上游发布版本及安装文档，请访问 [yeduk3/Glim](https://github.com/yeduk3/Glim)。
 
-- 🪶 **Native & minimal** — SwiftUI app, no Electron. Set it as your default `.md` app in Finder.
-- 👁️ **View / Edit** — switch with a single toggle (`⌘E`). View renders cleanly; Edit is raw text with lightweight Markdown linting.
-- 📐 **LaTeX math** — inline `$E=mc^2$` and display `$$…$$`, rendered offline with [KaTeX](https://katex.org). No network, ever.
-- 🗂 **Folder sidebar** — opening a file shows its parent folder's tree. Toggle with `⌘\` (animated). Close it for a distraction-free view.
-- 🔖 **Smart tabs** — files in the **same folder** open as tabs; files from a **different folder** open in a new window. Jump with `⌘1`–`⌘9`, cycle with `⌘⌥←` / `⌘⌥→`.
-- 👀 **Quick Look** — press <kbd>space</kbd> on any `.md` in Finder for a fully rendered preview (math, tables, syntax-highlighted code).
-- 🎨 **GitHub-style rendering** — tables, task lists, and syntax highlighting via [markdown-it](https://github.com/markdown-it/markdown-it) + [highlight.js](https://highlightjs.org), with automatic light/dark theming.
-- 💾 **Remembers window size** across launches.
+## Build locally / 本地构建
 
-## Requirements
-
-- macOS **14 (Sonoma)** or later
-- [Xcode](https://developer.apple.com/xcode/) 15+
-- [XcodeGen](https://github.com/yonyz/XcodeGen) — `brew install xcodegen`
-
-> The web rendering assets (markdown-it, KaTeX, highlight.js) are **vendored** in `App/Resources/web/`, so no `npm install` is needed to build.
-
-## Install
-
-### Download (prebuilt)
-
-Grab the latest **[Glim.app from Releases](https://github.com/yeduk3/Glim/releases/latest)** (Universal — Apple Silicon + Intel), unzip, and move it to `/Applications`. The app is signed with a Developer ID and **notarized by Apple**, so it opens with no Gatekeeper warnings.
-
-Launch it once to register the Quick Look extension. To make it your default Markdown app: right-click a `.md` → **Get Info** → **Open with** → **Glim** → **Change All…**
-
-### Build from source
+要求：macOS 14+、Xcode 15+、[XcodeGen](https://github.com/yonaskolb/XcodeGen)。
 
 ```bash
-git clone https://github.com/yeduk3/Glim.git
+git clone https://github.com/Borair/Glim.git
 cd Glim
+./build.sh
+```
+
+如需安装到本机，可运行：
+
+```bash
 ./install.sh
 ```
 
-`install.sh` builds a Release version, copies **Glim.app** to `/Applications`, registers it with Launch Services, sets it as the default handler for Markdown, and enables the Quick Look extension.
+> 构建与安装脚本来自上游项目；请先阅读脚本内容，并按自己的开发与签名环境配置。
 
-To build without installing:
+## Credits / 致谢
 
-```bash
-./build.sh            # Release  -> ~/Library/Developer/Xcode/DerivedData/glim-build/...
-./build.sh Debug      # Debug
-```
-
-> Builds intentionally target DerivedData **outside** the repo to avoid Spotlight/indexer churn. `build/`, `DerivedData/`, and the generated `Glim.xcodeproj` are git-ignored — `project.yml` is the source of truth.
-
-### Cut a release
-
-One command does the whole flow — bump version, commit, push, build + sign + notarize, install to `/Applications`, publish the GitHub release, and clean up build artifacts:
-
-```bash
-./ship.sh 1.1.5                                   # prints a plan, asks to confirm
-./ship.sh 1.1.5 -m "release: …" -n notes.md -y    # custom message + notes, no prompt
-```
-
-It bumps `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` in `project.yml`, reads the Team ID from your Developer ID certificate, and refuses to clobber an existing tag/release. Requires the same signing prerequisites as `release.sh` (a *Developer ID Application* cert and a `notarytool` keychain profile, default `glim-notary`). The build/sign/notarize step is `release.sh`; `ship.sh` wraps the git + install + publish + clean around it.
-
-## Usage
-
-| Action | How |
-|---|---|
-| Open a file | Double-click a `.md` in Finder (after install), or drag it onto the app |
-| Toggle View / Edit | `⌘E` (or the toolbar switch) |
-| Toggle sidebar | `⌘\` |
-| Open file as tab | Click a Markdown file in the sidebar (same folder ⇒ tab) |
-| Next / previous tab | `⌘⌥→` / `⌘⌥←` |
-| Jump to tab _n_ | `⌘1` … `⌘9` |
-| Open line below / above in raw editor | `⌘↩` / `⇧⌘↩` |
-| Move / duplicate raw-editor lines | `⌥↑` `⌥↓` / `⌥⇧↑` `⌥⇧↓` |
-| Delete raw-editor line(s) | `⇧⌘K` |
-| Toggle HTML comments in raw editor | `⌘/` |
-| Quick Look preview | Select a `.md` in Finder, press <kbd>space</kbd> |
-
-### Make Glim the default Markdown app
-
-`install.sh` does this automatically. To set it manually: right-click any `.md` in Finder → **Get Info** → **Open with** → **Glim** → **Change All…**
-
-## How it works
-
-- **Editor window** — SwiftUI. *View* mode renders Markdown in a `WKWebView` (markdown-it → HTML, KaTeX for math, highlight.js for code). *Edit* mode is an `NSTextView` with soft-wrap and a small line-based linter.
-- **Quick Look extension** — Finder's QL sandbox won't let a `WKWebView` spawn its WebContent process, so the extension renders Markdown to **fully static HTML in-process with JavaScriptCore** (KaTeX is pre-expanded to HTML + base64-inlined fonts) and returns it as a data-based `QLPreviewReply`. No JavaScript runs at display time.
-
-  > The Quick Look extension was built by studying **[sbarex/QLMarkdown](https://github.com/sbarex/QLMarkdown)** — its working implementation is what revealed the two non-obvious requirements (`QLIsDataBasedPreview` in the extension `Info.plist`, and that a sandboxed `WKWebView` can't be used directly). Many thanks to that project. 🙏
-
-## Project layout
-
-```
-App/                     SwiftUI app
-  Viewer/                WKWebView renderer (View mode)
-  Editor/                NSTextView + Markdown linter (Edit mode)
-  Sidebar/               parent-folder file tree
-  Resources/web/         vendored markdown-it · KaTeX · highlight.js · texmath
-QuickLook/               data-based Quick Look preview extension (JavaScriptCore)
-project.yml              XcodeGen project spec
-build.sh / install.sh    build & install scripts
-release.sh / ship.sh     sign+notarize · one-command release (bump→publish→clean)
-```
-
-## Uninstall
-
-```bash
-rm -rf /Applications/Glim.app
-```
-
-(Reset the default app for `.md` via Finder → Get Info if desired.)
-
-## Credits & Acknowledgements
-
-- **[sbarex/QLMarkdown](https://github.com/sbarex/QLMarkdown)** — Glim's Quick Look extension was made by **referencing this project**. Studying its source is what made the data-based preview work (see [How it works](#how-it-works)). Huge thanks. 🙏
-- Rendering powered by [markdown-it](https://github.com/markdown-it/markdown-it), [KaTeX](https://katex.org), [highlight.js](https://highlightjs.org), and [markdown-it-texmath](https://github.com/goessner/markdown-it-texmath).
+- [yeduk3/Glim](https://github.com/yeduk3/Glim) — original project and primary implementation
+- [sbarex/QLMarkdown](https://github.com/sbarex/QLMarkdown) — reference for the Quick Look implementation
+- [markdown-it](https://github.com/markdown-it/markdown-it), [KaTeX](https://katex.org), [highlight.js](https://highlightjs.org), and [markdown-it-texmath](https://github.com/goessner/markdown-it-texmath)
 
 ## License
 
-[MIT](LICENSE) © yeduk3
+This derivative repository remains available under the [MIT License](LICENSE). Copyright © 2026 yeduk3.
